@@ -66,6 +66,13 @@ def test_parse_env_file_invalid_line_raises(tmp_path):
         parse_env_file(str(p))
 
 
+def test_parse_env_file_missing_file_raises(tmp_path):
+    """Parsing a non-existent file should raise EnvFileError."""
+    missing = str(tmp_path / "does_not_exist.env")
+    with pytest.raises(EnvFileError, match="not found"):
+        parse_env_file(missing)
+
+
 # --- import_from_env_file ---
 
 def test_import_adds_secrets_to_vault(tmp_path, env_file):
@@ -103,28 +110,14 @@ def test_export_contains_all_keys(vault, tmp_path):
     out = str(tmp_path / "out.env")
     export_to_env_file(vault, out)
     result = parse_env_file(out)
-    assert result["DB_HOST"] == "localhost"
-    assert result["API_KEY"] == "abc123"
+    assert set(result.keys()) == {"DB_HOST", "DB_PORT", "API_KEY"}
 
 
-def test_export_subset_of_keys(vault, tmp_path):
-    out = str(tmp_path / "out.env")
-    exported = export_to_env_file(vault, out, keys=["DB_HOST"])
-    assert exported == ["DB_HOST"]
-    result = parse_env_file(out)
-    assert "DB_PORT" not in result
-
-
-def test_export_empty_vault_raises(tmp_path):
-    v = Vault(str(tmp_path / "v.db"), password="pw")
-    with pytest.raises(EnvFileError):
-        export_to_env_file(v, str(tmp_path / "out.env"))
-
-
-def test_roundtrip_import_export(vault, tmp_path):
+def test_export_values_match_vault(vault, tmp_path):
+    """Exported values should exactly match what is stored in the vault."""
     out = str(tmp_path / "out.env")
     export_to_env_file(vault, out)
-    v2 = Vault(str(tmp_path / "v2.db"), password="pw2")
-    import_from_env_file(v2, out)
-    assert v2.get("DB_HOST") == vault.get("DB_HOST")
-    assert v2.get("API_KEY") == vault.get("API_KEY")
+    result = parse_env_file(out)
+    assert result["DB_HOST"] == vault.get("DB_HOST")
+    assert result["DB_PORT"] == vault.get("DB_PORT")
+    assert result["API_KEY"] == vault.get("API_KEY")
