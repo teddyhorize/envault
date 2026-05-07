@@ -37,6 +37,58 @@ class MergeResult(NamedTuple):
         return "\n".join(lines)
 
 
+def merge_dicts(
+    source: Dict[str, str],
+    destination: Dict[str, str],
+    strategy: ConflictStrategy = ConflictStrategy.KEEP_RIGHT,
+) -> tuple[Dict[str, str], MergeResult]:
+    """Merge two plain dictionaries with the same conflict resolution logic.
+
+    This is useful when working with env files loaded into memory rather than
+    Vault objects.  The *destination* dict is not mutated; a new merged dict
+    is returned alongside the MergeResult.
+
+    Args:
+        source: Dictionary to read values from.
+        destination: Dictionary to merge values into (not mutated).
+        strategy: How to handle keys that exist in both dicts.
+
+    Returns:
+        A tuple of (merged_dict, MergeResult).
+
+    Raises:
+        MergeError: If strategy is FAIL and a conflict is detected.
+    """
+    merged = dict(destination)
+    added: List[str] = []
+    updated: List[str] = []
+    skipped: List[str] = []
+    conflicts: List[str] = []
+
+    for key, src_value in source.items():
+        if key in destination:
+            conflicts.append(key)
+            if strategy == ConflictStrategy.FAIL:
+                raise MergeError(
+                    f"Conflict on key '{key}' and strategy is FAIL."
+                )
+            elif strategy == ConflictStrategy.KEEP_RIGHT:
+                merged[key] = src_value
+                updated.append(key)
+            else:  # KEEP_LEFT
+                skipped.append(key)
+        else:
+            merged[key] = src_value
+            added.append(key)
+
+    return merged, MergeResult(
+        added=added,
+        updated=updated,
+        skipped=skipped,
+        conflicts=conflicts,
+    )
+
+
 def merge_vaults(
     source: Vault,
     destination: Vault,
