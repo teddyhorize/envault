@@ -48,6 +48,17 @@ def test_create_snapshot_has_timestamp(vault):
     assert isinstance(payload["created_at"], float)
 
 
+def test_create_snapshot_timestamp_is_recent(vault):
+    """Ensure the snapshot timestamp reflects the current time."""
+    import time
+
+    before = time.time()
+    result = create_snapshot(vault)
+    after = time.time()
+    payload = json.loads(result)
+    assert before <= payload["created_at"] <= after
+
+
 def test_create_snapshot_empty_vault_raises(empty_vault):
     with pytest.raises(SnapshotError, match="empty"):
         create_snapshot(empty_vault)
