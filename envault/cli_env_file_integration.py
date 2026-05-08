@@ -27,12 +27,22 @@ def make_env_file_cli() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Entry point for the standalone env-file CLI.
+
+    Parses *argv* (or ``sys.argv[1:]`` when *argv* is ``None``), dispatches to
+    the appropriate subcommand handler, and exits with a non-zero status code if
+    an unhandled exception is raised during execution.
+    """
     parser = make_env_file_cli()
     args = parser.parse_args(argv)
     if not args.command:
         parser.print_help()
         sys.exit(1)
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as exc:  # noqa: BLE001
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":  # pragma: no cover
