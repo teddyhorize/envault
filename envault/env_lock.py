@@ -66,3 +66,23 @@ def get_lock_info(vault_path: str) -> dict | None:
         return json.loads(lock_file.read_text())
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def wait_for_lock(vault_path: str, owner: str = "envault", timeout: float = LOCK_TIMEOUT_SECONDS, poll_interval: float = 0.1) -> bool:
+    """Poll until the lock is acquired or the timeout is exceeded.
+
+    Args:
+        vault_path: Path to the vault file.
+        owner: Identifier for the lock owner.
+        timeout: Maximum seconds to wait before giving up.
+        poll_interval: Seconds to sleep between acquisition attempts.
+
+    Returns:
+        True if the lock was acquired within the timeout, False otherwise.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if acquire_lock(vault_path, owner=owner):
+            return True
+        time.sleep(poll_interval)
+    return False
