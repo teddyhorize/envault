@@ -49,6 +49,16 @@ def test_search_pattern_empty_exits(src_vault):
         cmd_search_pattern(args)
 
 
+def test_search_pattern_wildcard_matches_all(src_vault, capsys):
+    """A bare '*' pattern should match every key in the vault."""
+    args = _make_args(src_vault.path, PASSWORD, pattern="*")
+    cmd_search_pattern(args)
+    out = capsys.readouterr().out
+    assert "DB_HOST" in out
+    assert "DB_PORT" in out
+    assert "API_KEY" in out
+
+
 def test_search_tag_prints_tagged_keys(src_vault, capsys):
     args = _make_args(src_vault.path, PASSWORD, tag="database")
     cmd_search_tag(args)
