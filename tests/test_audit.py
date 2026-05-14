@@ -84,3 +84,19 @@ def test_audit_log_persists_across_instances(tmp_path):
     entries = log2.entries()
     assert len(entries) == 1
     assert entries[0].key == "PERSIST"
+
+
+def test_entries_filter_by_action(audit):
+    """Entries can be filtered by action type to narrow audit review."""
+    audit.record("set", key="FOO", actor="alice")
+    audit.record("get", key="FOO", actor="bob")
+    audit.record("set", key="BAR", actor="alice")
+    audit.record("delete", key="FOO", actor="alice")
+
+    set_entries = [e for e in audit.entries() if e.action == "set"]
+    assert len(set_entries) == 2
+    assert all(e.action == "set" for e in set_entries)
+
+    get_entries = [e for e in audit.entries() if e.action == "get"]
+    assert len(get_entries) == 1
+    assert get_entries[0].actor == "bob"
